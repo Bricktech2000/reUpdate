@@ -8,17 +8,20 @@
 <body>
   <script type="module">
     import {reUpdate} from './reUpdate-client.js';
+    window.reUpdate = reUpdate;
     reUpdate.log();
-    reUpdate.this.sleep = async function(ms){
-      return new Promise(resolve => setTimeout(resolve, ms));
-    }
   </script>
-  
   <<<this.test = 'test'>>>
   << console.log('This is a <<<yield this.test>>>.') >>
+
+  <button onclick="toggleButtonState()">Toggle State</button>
+  << toggleButtonState = () => this.buttonState = !this.buttonState >>
+  State: << yield this.buttonState || false >>
+  <br>
+  
   << yield 'This is a <b>raw HTML</b> include' >>
   <br>
-  Here is a test error: <<<handledServerError>>>
+  Here is a test error: <<<throw new Error('This is a test error.')>>>
   <br>
   Your IP is <<<yield req.connection.remoteAddress>>>
   <br>
