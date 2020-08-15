@@ -10,5 +10,13 @@
     import {reUpdate} from './reUpdate-client.js';
     reUpdate.log();
   </script>
+  
+  <<< this.test = 'test' >>>
+  << console.log('This is a <<<return this.test>>>.') >>
+  << return '<b>raw HTML</b>' >>
+  <br>
+  <<< handledServerError >>>
+  <br>
+  Your IP is <<<return req.connection.remoteAddress>>>
 </body>
 </html>

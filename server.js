@@ -14,16 +14,16 @@ reUpdate.log();
 
 
 
-app.use(reUpdate.express);
+app.use(reUpdate.express(clientPath));
 //https://evanhahn.com/express-dot-static-deep-dive/
 app.use(express.static(clientPath, {
   index: 'index.html'
 }));
 //https://expressjs.com/en/guide/error-handling.html
 //https://stackoverflow.com/questions/29481729/chaining-express-js-4s-res-status401-to-a-redirect
-app.use(function (req, res, next) {
-  res.status(404).sendFile(clientPath + '/404.html');//redirect(404, '/emilien.ml/#404');
-});
+//app.use(function (req, res, next) {
+//  res.status(404).sendFile(clientPath + '/404.html');//redirect(404, '/emilien.ml/#404');
+//});
 
 
 var httpServer = http.createServer(app);
