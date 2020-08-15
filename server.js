@@ -14,6 +14,7 @@ reUpdate.log();
 
 
 
+app.use(reUpdate.express);
 //https://evanhahn.com/express-dot-static-deep-dive/
 app.use(express.static(clientPath, {
   index: 'index.html'
@@ -31,7 +32,6 @@ httpServer.listen(8080, function(){
     var port = httpServer.address().port;
     console.log('listening on http://' + host + ':' + port + '/');
 });
-
 
 
 
