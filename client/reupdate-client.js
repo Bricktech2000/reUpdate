@@ -1,3 +1,7 @@
-module.exports =  {
-    log: () => console.log('reUpdate-client!'),
+var reUpdate = {
+  log: () => console.log('reUpdate-client!'),
+}
+
+export {
+  reUpdate,
 }
