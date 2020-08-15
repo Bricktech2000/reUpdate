@@ -15,6 +15,11 @@ var internal = {
       .replace(/&gt;/g, '>')
       .replace(/&amp;/g, '&')
   },
+  include: async function(filename){
+    var res = await fetch(filename);
+    var text = await res.text();
+    return text;
+  },
 }
 class CodeBlock{
   constructor(src){
@@ -40,7 +45,7 @@ class CodeBlock{
         return true;
       }
     });
-    var gen = GeneratorFunction(this.src).bind(proxy)() || '';
+    var gen = GeneratorFunction('include', this.src).bind(proxy, internal.include)() || '';
     for await(var html of gen) this.yield(html);
   }
   yield(html){
