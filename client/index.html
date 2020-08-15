@@ -9,14 +9,33 @@
   <script type="module">
     import {reUpdate} from './reUpdate-client.js';
     reUpdate.log();
+    reUpdate.this.sleep = async function(ms){
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
   </script>
   
-  <<< this.test = 'test' >>>
-  << console.log('This is a <<<return this.test>>>.') >>
-  << return '<b>raw HTML</b>' >>
+  <<<this.test = 'test'>>>
+  << console.log('This is a <<<yield this.test>>>.') >>
+  << yield 'This is a <b>raw HTML</b> include' >>
   <br>
-  <<< handledServerError >>>
+  Here is a test error: <<<handledServerError>>>
   <br>
-  Your IP is <<<return req.connection.remoteAddress>>>
+  Your IP is <<<yield req.connection.remoteAddress>>>
+  <br>
+  <<
+    await this.sleep(1000);
+    yield '1<br>';
+    await this.sleep(1000);
+    yield '2<br>';
+    await this.sleep(1000);
+    yield '3<br>';
+  >>
+  <<
+    await this.sleep(4000);
+    for(var i = 0; i < 50; i++){
+      await this.sleep(50);
+      yield '#';
+    }
+  >>
 </body>
 </html>

@@ -22,7 +22,7 @@ var reUpdate = {
         );
         //https://nodejs.org/dist/latest-v10.x/docs/api/fs.html#fs_filehandle_readfile_options
         var text = await fs.readFile(fullPath, {encoding: encoding});
-        text = internal.parse(req, res, text, internal.mimeTypes[mimeType]);
+        text = await internal.parse(req, res, text, internal.mimeTypes[mimeType]);
         res.end(text);
       }else{
         next();
@@ -32,24 +32,39 @@ var reUpdate = {
 }
 var internal = {
   regexes: {
-    server: /<<<(.*?)>>>/g,
-    client: /<<(.*?)>>/g,
+    server: /<<<([^]*?)>>>/g,
+    client: /<<([^]*?)>>/g,
   },
   mimeTypes: {
     'text/html': code => `<code class="reUpdate" style="display: none;">${code}</code>`,
   },
-  parse: function(req, res, text, func){
+  parse: async function(req, res, text, func){
     //return text + '//reUpdate added this comment';
-    return text
-      .replace(internal.regexes.server, function(a, code){
-        try{
-          return new Function('req', 'res', code).bind(reUpdate.this, req, res)() || ''
-        }catch(e){
-          return 'Server' + e;
-        }
-      })
+    async function evalFunc(code){
+      try{
+        var ret = '';
+        //https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/GeneratorFunction
+        var GeneratorFunction = Object.getPrototypeOf(async function*(){}).constructor;
+        var gen = new GeneratorFunction('req', 'res', code).bind(reUpdate.this, req, res)();
+        for await(var r of gen) ret += r;
+        return ret;
+      }catch(e){
+        return 'Server' + e;
+      }
+    }
+    return (await replaceAsync(text, internal.regexes.server, async (a, code) => await evalFunc(code)))
       .replace(internal.regexes.client, (a, code) => func(code) )
   },
+}
+//https://stackoverflow.com/questions/33631041/javascript-async-await-in-replace
+async function replaceAsync(str, regex, asyncFn) {
+  const promises = [];
+  str.replace(regex, (match, ...args) => {
+      const promise = asyncFn(match, ...args);
+      promises.push(promise);
+  });
+  const data = await Promise.all(promises);
+  return str.replace(regex, () => data.shift());
 }
 
 module.exports = reUpdate;

@@ -3,14 +3,28 @@ var reUpdate = {
   this: {},
 }
 var internal = {
-  load: function(e){
+  load: async function(e){
     var parent = e.targetElement;
     var elems = parent.querySelectorAll('code.reUpdate');
     
-    for(var elem of elems)
+    for(var elem of elems){
+      (async function(elem){
+        console.log(elem);
+        //https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/GeneratorFunction
+        var GeneratorFunction = Object.getPrototypeOf(async function*(){}).constructor;
+        var gen = new GeneratorFunction(internal.rawHTML(elem)).bind(reUpdate.this)() || '';
+        for await(var r of gen)
+          elem.insertAdjacentHTML('beforebegin', r);
+      })(elem);
       //https://developer.mozilla.org/en-US/docs/Web/API/Element/insertAdjacentHTML
-      elem.insertAdjacentHTML('beforebegin', new Function(elem.innerHTML).bind(reUpdate.this)() || '');
+    }
   },
+  rawHTML: function(elem){
+    return elem.innerHTML
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+  }
 }
 
 export {
