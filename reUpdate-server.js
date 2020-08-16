@@ -38,7 +38,7 @@ var internal = {
   mimeTypes: {
     'text/html': code => `<code class="reUpdate" style="display: none;">${code}</code>`,
   },
-  parse: async function(text, params = {}, func){
+  parse: async function(text = '', params = {}, func){
     //return text + '//reUpdate added this comment';
     async function exec(code){
       try{
