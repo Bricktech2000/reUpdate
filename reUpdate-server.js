@@ -22,7 +22,7 @@ var reUpdate = {
         );
         //https://nodejs.org/dist/latest-v10.x/docs/api/fs.html#fs_filehandle_readfile_options
         var text = await fs.readFile(f.fullPath, {encoding: f.encoding});
-        text = await internal.parse(text, {req: req, res: res}, internal.mimeTypes[f.mimeType]);
+        text = await internal.parse(text, {req: req, res: res, path: '/'}, internal.mimeTypes[f.mimeType]);
         res.end(text);
       }else{
         next();
@@ -47,19 +47,22 @@ var internal = {
         var GeneratorFunction = Object.getPrototypeOf(async function*(){}).constructor;
         var gen = new GeneratorFunction('include', 'params', code).bind(
           reUpdate.this,
-          internal.include, //.bind(this, {req: params.req, res: params.res}),
+          internal.include.bind(null, params.path), //.bind(this, {req: params.req, res: params.res}),
           params
         )();
         for await(var html of gen){
           var isArray = Array.isArray(html);
-          var html2 = await (isArray ? html[0] : html);
+          var html2 = isArray ? html[0] : html;
+          var text = html2 !== undefined ? (html2.text || html2) : html2;
+          console.log(html2);
           var params2 = {
             req: params.req,
             res: params.res,
+            path: text !== undefined ? (html.path || params.path) : params.path,
             ...(isArray ? html[1] : {})
           };
           //this.yield(html2, params2);
-          ret += await internal.parse(html2, params2, func);
+          ret += await internal.parse(text, params2, func);
         }
         return ret;
       }catch(e){
@@ -69,10 +72,11 @@ var internal = {
     return (await replaceAsync(text, internal.regexes.server, async (a, code) => await exec(code)))
       .replace(internal.regexes.client, (a, code) => func(code) )
   },
-  include: async function(filename){
-    var f = internal.fileInfo(path.join(reUpdate.clientPath, filename));
+  include: async function(filepath, filename){
+    //https://stackoverflow.com/questions/17192150/node-js-get-folder-path-from-a-file
+    var f = internal.fileInfo(path.join(reUpdate.clientPath, filepath, filename));
     var text = await fs.readFile(f.fullPath, {encoding: f.encoding});
-    return text; //, {..._params, ...params});
+    return {text: text, path: path.dirname(path.join(filepath, filename))}; //, {..._params, ...params});
   },
   fileInfo(filePath){
     return {
