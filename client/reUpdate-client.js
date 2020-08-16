@@ -76,23 +76,14 @@ class htmlCodeBlock extends CodeBlock{
   }
   yield(html, params){
     var html2 = internal.parse(html, params);
-    if(html2 instanceof DocumentFragment || html2 instanceof HTMLElement){
-      var elem;
-      while(elem = html2.childNodes[0]){
-        if(!this.topElem) this.topElem = elem;
-        this.elem.parentNode.insertBefore(elem, this.elem);
-      }
-    }else{
-      throw new Error('yielding string');
-      //https://developer.mozilla.org/en-US/docs/Web/API/Element/insertAdjacentHTML
-      this.elem.insertAdjacentHTML('beforebegin', html2);
-      if(!this.topElem) this.topElem = this.elem.previousSibling;
+    var elem;
+    while(elem = html2.childNodes[0]){
+      if(!this.topElem) this.topElem = elem;
+      this.elem.parentNode.insertBefore(elem, this.elem);
     }
-
-    /*requestAnimationFrame( function(){
-      internal.onload({targetElement: this.elem.parentNode});
-      console.log({targetElement: this.elem.parentNode});
-    }.bind(this) );*/
+    //https://developer.mozilla.org/en-US/docs/Web/API/Element/insertAdjacentHTML
+    //this.elem.insertAdjacentHTML('beforebegin', html2);
+    //(!this.topElem) this.topElem = this.elem.previousSibling;
   }
   reexec(){
     if(this.topElem){
@@ -120,6 +111,7 @@ var reUpdate = {
       return internal.this[key];
     },
     set: function(target, key, value){
+      if(internal.this[key] == value) return true;
       internal.this[key] = value;
       var internalCodeBlocks = [...internal.codeBlocks];
       for(var codeBlock of internalCodeBlocks)
