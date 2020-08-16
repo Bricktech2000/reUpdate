@@ -3,8 +3,8 @@ const http = require('http');
 const express = require('express');
 var app = express();
 
-const clientPath = path.join(__dirname, 'client');
-const serverPath = path.join(__dirname, 'server');
+const basePath = __dirname;
+const clientPath = 'client';
 //https://stackoverflow.com/questions/58384179/syntaxerror-cannot-use-import-statement-outside-a-module
 const reUpdate = require('./reUpdate-server');
 reUpdate.log();
@@ -14,7 +14,7 @@ reUpdate.log();
 
 
 
-app.use(reUpdate.express(clientPath));
+app.use(reUpdate.express(basePath, clientPath));
 //https://evanhahn.com/express-dot-static-deep-dive/
 app.use(express.static(clientPath, {
   index: 'index.html'

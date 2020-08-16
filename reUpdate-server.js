@@ -7,12 +7,13 @@ var reUpdate = {
   log: () => console.log('reUpdate-server!'),
   //https://expressjs.com/en/guide/writing-middleware.html
   this: {},
-  express: function(clientPath){
+  express: function(basePath, clientPath){
     this.clientPath = clientPath;
+    this.basePath = basePath;
     return async function(req, res, next){
       if(req.url[req.url.length - 1] == '/')
         req.url += 'index.html';
-      var f = internal.fileInfo(path.join(reUpdate.clientPath, req.url));
+      var f = internal.fileInfo(path.join(reUpdate.basePath, reUpdate.clientPath, req.url));
       console.log('Requesting: ' + req.url + ', Mime Type: ' + f.mimeType);
 
       if(internal.mimeTypes[f.mimeType]){
@@ -75,12 +76,12 @@ var internal = {
     //https://stackoverflow.com/questions/17192150/node-js-get-folder-path-from-a-file
     var filePath = path.join(filePath1, path.dirname(filePath2));
     var fileName = path.basename(filePath2);
-    var fullPath = path.join(reUpdate.clientPath, filePath, fileName);
+    var fullPath = path.join(reUpdate.basePath, filePath, fileName);
 
     if((await fs.lstat(fullPath)).isDirectory()){
       filePath = path.join(filePath, fileName);
       fileName = 'index.html';
-      fullPath = path.join(reUpdate.clientPath, filePath, fileName);
+      fullPath = path.join(reUpdate.basePath, filePath, fileName);
     }
     
     var f = internal.fileInfo(fullPath);
