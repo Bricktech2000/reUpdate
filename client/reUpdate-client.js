@@ -1,7 +1,7 @@
 var internal = {
   this: {},
   codeBlocks: [],
-  parse: async function(html, params = {}){
+  parse: function(html, params = {}){
     var parent = html;
     if(!(html instanceof HTMLElement)){
       parent = document.createElement('template');
@@ -10,7 +10,7 @@ var internal = {
     }
     var elems = parent.querySelectorAll('code.reUpdate');
     
-    console.log(parent, params, elems);
+    //console.log(parent, params, elems);
     for(var elem of elems)
       internal.codeBlocks.push(new htmlCodeBlock(elem, params));
     
@@ -49,7 +49,13 @@ class CodeBlock{
       }
     });
     var gen = GeneratorFunction('include', 'params', this.src).bind(proxy, this.include, this.params)() || '';
-    for await(var html of gen) this.yield(html);
+    for await(var html of gen){
+      //var key = (typeof html === 'string') ? '' : Object.keys(html)[0];
+      var isArray = Array.isArray(html);
+      var html2 = await (isArray ? html[0] : html);
+      var params2 = isArray ? html[1] : {};
+      this.yield(html2, params2);
+    }
   }
   yield(html){
     throw new ReferenceError("Extended CodeBlock yield not defined.");
@@ -68,16 +74,18 @@ class htmlCodeBlock extends CodeBlock{
     this.elem = elem;
     this.elem.classList.remove('reUpdate');
   }
-  yield(html){
-    if(html instanceof DocumentFragment || html instanceof HTMLElement){
-      for(var elem of html.childNodes){
+  yield(html, params){
+    var html2 = internal.parse(html, params);
+    if(html2 instanceof DocumentFragment || html2 instanceof HTMLElement){
+      var elem;
+      while(elem = html2.childNodes[0]){
         if(!this.topElem) this.topElem = elem;
         this.elem.parentNode.insertBefore(elem, this.elem);
       }
-      console.log('topElem', this.topElem);
     }else{
+      throw new Error('yielding string');
       //https://developer.mozilla.org/en-US/docs/Web/API/Element/insertAdjacentHTML
-      this.elem.insertAdjacentHTML('beforebegin', html);
+      this.elem.insertAdjacentHTML('beforebegin', html2);
       if(!this.topElem) this.topElem = this.elem.previousSibling;
     }
 
@@ -97,10 +105,10 @@ class htmlCodeBlock extends CodeBlock{
     }
     this.exec();
   }
-  async include(filename, params){
+  async include(filename){
     var res = await fetch(filename);
     var text = await res.text();
-    return internal.parse(text, params);
+    return text;
   }
 }
 

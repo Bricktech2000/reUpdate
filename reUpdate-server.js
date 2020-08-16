@@ -39,29 +39,39 @@ var internal = {
   },
   parse: async function(text, params = {}, func){
     //return text + '//reUpdate added this comment';
-    async function evalFunc(code){
+    async function exec(code){
       try{
         var ret = '';
         //https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/GeneratorFunction
         var GeneratorFunction = Object.getPrototypeOf(async function*(){}).constructor;
         var gen = new GeneratorFunction('include', 'params', code).bind(
           reUpdate.this,
-          internal.include.bind(this, {req: params.req, res: params.res}),
+          internal.include, //.bind(this, {req: params.req, res: params.res}),
           params
         )();
-        for await(var r of gen) ret += r;
+        for await(var html of gen){
+          var isArray = Array.isArray(html);
+          var html2 = await (isArray ? html[0] : html);
+          var params2 = {
+            req: params.req,
+            res: params.res,
+            ...(isArray ? html[1] : {})
+          };
+          //this.yield(html2, params2);
+          ret += await internal.parse(html2, params2, func);
+        }
         return ret;
       }catch(e){
         return 'Server' + e;
       }
     }
-    return (await replaceAsync(text, internal.regexes.server, async (a, code) => await evalFunc(code)))
+    return (await replaceAsync(text, internal.regexes.server, async (a, code) => await exec(code)))
       .replace(internal.regexes.client, (a, code) => func(code) )
   },
-  include: async function(_params, filename, params){
+  include: async function(filename){
     var f = internal.fileInfo(reUpdate.clientPath + filename);
     var text = await fs.readFile(f.fullPath, {encoding: f.encoding});
-    return await internal.parse(text, {..._params, ...params});
+    return text; //, {..._params, ...params});
   },
   fileInfo(filePath){
     return {

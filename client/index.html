@@ -44,10 +44,10 @@
   << ChangeType = () => this.type = 'reUpdate' >>
   <button onclick="ChangeType()">Change Type</button>
   <<
-    yield include('/page.html', {type: this.type});
+    yield [include('/page.html'), {type: this.type}];
   >>
   <<<
-    yield include('/page.html', {type: 'statically'});
+    yield [include('/page.html'), {type: 'statically'}];
   >>>
 </body>
 </html>
