@@ -7,22 +7,21 @@ var reUpdate = {
   //https://expressjs.com/en/guide/writing-middleware.html
   this: {},
   express: function(clientPath){
+    this.clientPath = clientPath;
     return async function(req, res, next){
       if(req.url[req.url.length - 1] == '/')
         req.url += 'index.html';
-      var fullPath = clientPath + req.url;
-      var mimeType = mime.lookup(fullPath);
-      var encoding = mime.charset(mimeType);
-      console.log('Requesting: ' + req.url + ', Mime Type: ' + mimeType);
+      var f = internal.fileInfo(reUpdate.clientPath + req.url);
+      console.log('Requesting: ' + req.url + ', Mime Type: ' + f.mimeType);
 
-      if(internal.mimeTypes[mimeType]){
+      if(internal.mimeTypes[f.mimeType]){
         res.setHeader(
-          'Content-Type', mimeType + '; ' + 
-          'charset=' + encoding
+          'Content-Type', f.mimeType + '; ' + 
+          'charset=' + f.encoding
         );
         //https://nodejs.org/dist/latest-v10.x/docs/api/fs.html#fs_filehandle_readfile_options
-        var text = await fs.readFile(fullPath, {encoding: encoding});
-        text = await internal.parse(req, res, text, internal.mimeTypes[mimeType]);
+        var text = await fs.readFile(f.fullPath, {encoding: f.encoding});
+        text = await internal.parse(text, {req: req, res: res}, internal.mimeTypes[f.mimeType]);
         res.end(text);
       }else{
         next();
@@ -38,14 +37,18 @@ var internal = {
   mimeTypes: {
     'text/html': code => `<code class="reUpdate" style="display: none;">${code}</code>`,
   },
-  parse: async function(req, res, text, func){
+  parse: async function(text, params = {}, func){
     //return text + '//reUpdate added this comment';
     async function evalFunc(code){
       try{
         var ret = '';
         //https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/GeneratorFunction
         var GeneratorFunction = Object.getPrototypeOf(async function*(){}).constructor;
-        var gen = new GeneratorFunction('req', 'res', code).bind(reUpdate.this, req, res)();
+        var gen = new GeneratorFunction('include', 'params', code).bind(
+          reUpdate.this,
+          internal.include.bind(this, {req: params.req, res: params.res}),
+          params
+        )();
         for await(var r of gen) ret += r;
         return ret;
       }catch(e){
@@ -54,6 +57,18 @@ var internal = {
     }
     return (await replaceAsync(text, internal.regexes.server, async (a, code) => await evalFunc(code)))
       .replace(internal.regexes.client, (a, code) => func(code) )
+  },
+  include: async function(_params, filename, params){
+    var f = internal.fileInfo(reUpdate.clientPath + filename);
+    var text = await fs.readFile(f.fullPath, {encoding: f.encoding});
+    return await internal.parse(text, {..._params, ...params});
+  },
+  fileInfo(filePath){
+    return {
+      fullPath: filePath,
+      mimeType: mime.lookup(filePath),
+      encoding: mime.charset(mime.lookup(filePath)),
+    };
   },
 }
 //https://stackoverflow.com/questions/33631041/javascript-async-await-in-replace

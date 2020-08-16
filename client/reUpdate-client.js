@@ -1,13 +1,20 @@
 var internal = {
   this: {},
   codeBlocks: [],
-  onload: async function(e){
-    var parent = e.targetElement;
+  parse: async function(html, params = {}){
+    var parent = html;
+    if(!(html instanceof HTMLElement)){
+      parent = document.createElement('template');
+      parent.innerHTML = html;
+      parent = parent.content;
+    }
     var elems = parent.querySelectorAll('code.reUpdate');
     
-    for(var elem of elems){
-      internal.codeBlocks.push(new htmlCodeBlock(elem));
-    }
+    console.log(parent, params, elems);
+    for(var elem of elems)
+      internal.codeBlocks.push(new htmlCodeBlock(elem, params));
+    
+    return parent;
   },
   rawHTML: function(elem){
     return elem.innerHTML
@@ -15,15 +22,11 @@ var internal = {
       .replace(/&gt;/g, '>')
       .replace(/&amp;/g, '&')
   },
-  include: async function(filename){
-    var res = await fetch(filename);
-    var text = await res.text();
-    return text;
-  },
 }
 class CodeBlock{
-  constructor(src){
+  constructor(src, params){
     this.src = src;
+    this.params = params;
     this.events = [];
     this.exec();
   }
@@ -45,7 +48,7 @@ class CodeBlock{
         return true;
       }
     });
-    var gen = GeneratorFunction('include', this.src).bind(proxy, internal.include)() || '';
+    var gen = GeneratorFunction('include', 'params', this.src).bind(proxy, this.include, this.params)() || '';
     for await(var html of gen) this.yield(html);
   }
   yield(html){
@@ -54,19 +57,34 @@ class CodeBlock{
   reexec(){
     throw new ReferenceError("Extended CodeBlock reexec not defined.");
   }
+  async include(){
+    throw new ReferenceError("Extended CodeBlock include not defined.");
+  }
 }
 class htmlCodeBlock extends CodeBlock{
-  constructor(elem){
+  constructor(elem, params){
     var src = internal.rawHTML(elem);
-    super(src);
+    super(src, params);
     this.elem = elem;
+    this.elem.classList.remove('reUpdate');
   }
   yield(html){
-    //https://developer.mozilla.org/en-US/docs/Web/API/Element/insertAdjacentHTML
-    this.elem.insertAdjacentHTML('beforebegin', html);
-    //setTimeout(() => {
-      if(!this.topElem) this.topElem = this.elem.previousSibling
-    //});
+    if(html instanceof DocumentFragment || html instanceof HTMLElement){
+      for(var elem of html.childNodes){
+        if(!this.topElem) this.topElem = elem;
+        this.elem.parentNode.insertBefore(elem, this.elem);
+      }
+      console.log('topElem', this.topElem);
+    }else{
+      //https://developer.mozilla.org/en-US/docs/Web/API/Element/insertAdjacentHTML
+      this.elem.insertAdjacentHTML('beforebegin', html);
+      if(!this.topElem) this.topElem = this.elem.previousSibling;
+    }
+
+    /*requestAnimationFrame( function(){
+      internal.onload({targetElement: this.elem.parentNode});
+      console.log({targetElement: this.elem.parentNode});
+    }.bind(this) );*/
   }
   reexec(){
     if(this.topElem){
@@ -79,6 +97,11 @@ class htmlCodeBlock extends CodeBlock{
     }
     this.exec();
   }
+  async include(filename, params){
+    var res = await fetch(filename);
+    var text = await res.text();
+    return internal.parse(text, params);
+  }
 }
 
 var reUpdate = {
@@ -89,7 +112,6 @@ var reUpdate = {
       return internal.this[key];
     },
     set: function(target, key, value){
-      //console.log(internal.codeBlocks);
       internal.this[key] = value;
       var internalCodeBlocks = [...internal.codeBlocks];
       for(var codeBlock of internalCodeBlocks)
@@ -109,8 +131,6 @@ export {
   reUpdate,
 }
 
-window.addEventListener('load', (e) => internal.onload(
-  {
-    targetElement: document.documentElement,
-  }
-));
+window.addEventListener('load', (e) =>
+  internal.parse(document.documentElement)
+);
