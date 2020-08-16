@@ -1,5 +1,6 @@
 const fs = require('fs').promises;
 const mime = require('mime-types');
+const path = require('path');
 
 
 var reUpdate = {
@@ -11,7 +12,7 @@ var reUpdate = {
     return async function(req, res, next){
       if(req.url[req.url.length - 1] == '/')
         req.url += 'index.html';
-      var f = internal.fileInfo(reUpdate.clientPath + req.url);
+      var f = internal.fileInfo(path.join(reUpdate.clientPath, req.url));
       console.log('Requesting: ' + req.url + ', Mime Type: ' + f.mimeType);
 
       if(internal.mimeTypes[f.mimeType]){
@@ -69,7 +70,7 @@ var internal = {
       .replace(internal.regexes.client, (a, code) => func(code) )
   },
   include: async function(filename){
-    var f = internal.fileInfo(reUpdate.clientPath + filename);
+    var f = internal.fileInfo(path.join(reUpdate.clientPath, filename));
     var text = await fs.readFile(f.fullPath, {encoding: f.encoding});
     return text; //, {..._params, ...params});
   },
