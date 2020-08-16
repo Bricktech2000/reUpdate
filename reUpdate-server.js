@@ -54,7 +54,6 @@ var internal = {
           var isArray = Array.isArray(html);
           var html2 = isArray ? html[0] : html;
           var text = html2 !== undefined ? (html2.text || html2) : html2;
-          console.log(html2);
           var params2 = {
             req: params.req,
             res: params.res,
@@ -72,11 +71,21 @@ var internal = {
     return (await replaceAsync(text, internal.regexes.server, async (a, code) => await exec(code)))
       .replace(internal.regexes.client, (a, code) => func(code) )
   },
-  include: async function(filepath, filename){
+  include: async function(filePath1, filePath2){
     //https://stackoverflow.com/questions/17192150/node-js-get-folder-path-from-a-file
-    var f = internal.fileInfo(path.join(reUpdate.clientPath, filepath, filename));
+    var filePath = path.join(filePath1, path.dirname(filePath2));
+    var fileName = path.basename(filePath2);
+    var fullPath = path.join(reUpdate.clientPath, filePath, fileName);
+
+    if((await fs.lstat(fullPath)).isDirectory()){
+      filePath = path.join(filePath, fileName);
+      fileName = 'index.html';
+      fullPath = path.join(reUpdate.clientPath, filePath, fileName);
+    }
+    
+    var f = internal.fileInfo(fullPath);
     var text = await fs.readFile(f.fullPath, {encoding: f.encoding});
-    return {text: text, path: path.dirname(path.join(filepath, filename))}; //, {..._params, ...params});
+    return {text: text, path: path.dirname(path.join(filePath, fileName))}; //, {..._params, ...params});
   },
   fileInfo(filePath){
     return {
