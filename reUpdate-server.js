@@ -11,8 +11,15 @@ var reUpdate = {
     this.clientPath = clientPath;
     this.basePath = basePath;
     return async function(req, res, next){
-      if(req.url == '/') req.url += '../index.html';
-      var f = internal.fileInfo(path.join(reUpdate.basePath, reUpdate.clientPath, req.url));
+      console.log(req.url);
+      if(req.url == '/') req.url += '/../';
+      req.url = await internal.addIndexHTML(path.join(reUpdate.clientPath, req.url));
+
+      console.log(reUpdate.clientPath, req.url);
+      //else if((await fs.lstat(path.join(reUpdate.basePath, reUpdate.clientPath, req.url))).isDirectory())
+      //  req.url = path.join(req.url, 'index.html');
+      console.log(req.url);
+      var f = internal.fileInfo(path.join(reUpdate.basePath, req.url));
       console.log('Requesting: ' + req.url + ', Mime Type: ' + f.mimeType);
 
       if(internal.mimeTypes[f.mimeType]){
@@ -22,10 +29,10 @@ var reUpdate = {
         );
         //https://nodejs.org/dist/latest-v10.x/docs/api/fs.html#fs_filehandle_readfile_options
         var text = await fs.readFile(f.fullPath, {encoding: f.encoding});
-        text = await internal.parse(text, {req: req, res: res, path: '/'}, internal.mimeTypes[f.mimeType]);
+        text = await internal.parse(text, {req: req, res: res, path: path.dirname(req.url)}, internal.mimeTypes[f.mimeType]);
         res.end(text);
       }else{
-        next();
+        res.sendFile(f.fullPath);
       }
     }
   },
@@ -73,19 +80,12 @@ var internal = {
   },
   include: async function(filePath1, filePath2){
     //https://stackoverflow.com/questions/17192150/node-js-get-folder-path-from-a-file
-    var filePath = path.join(filePath1, path.dirname(filePath2));
-    var fileName = path.basename(filePath2);
-    var fullPath = path.join(reUpdate.basePath, filePath, fileName);
-
-    if((await fs.lstat(fullPath)).isDirectory()){
-      filePath = path.join(filePath, fileName);
-      fileName = 'index.html';
-      fullPath = path.join(reUpdate.basePath, filePath, fileName);
-    }
+    var relPath = await internal.addIndexHTML(path.join(filePath1, filePath2));
+    var fullPath = path.join(reUpdate.basePath, relPath);
     
     var f = internal.fileInfo(fullPath);
     var text = await fs.readFile(f.fullPath, {encoding: f.encoding});
-    return {text: text, path: path.dirname(path.join(filePath, fileName))}; //, {..._params, ...params});
+    return {text: text, path: path.dirname(relPath)}; //, {..._params, ...params});
   },
   fileInfo(filePath){
     return {
@@ -94,6 +94,11 @@ var internal = {
       encoding: mime.charset(mime.lookup(filePath)),
     };
   },
+  async addIndexHTML(filePath){
+    fullPath = path.join(reUpdate.basePath, filePath);
+    if((await fs.lstat(fullPath)).isDirectory()) filePath = path.join(filePath, 'index.html');
+    return filePath;
+  }
 }
 //https://stackoverflow.com/questions/33631041/javascript-async-await-in-replace
 async function replaceAsync(str, regex, asyncFn) {
