@@ -104,7 +104,7 @@ class htmlCodeBlock extends CodeBlock{
     this.exec();
   }
   async include(filename, params){
-    var res = await fetch(filename);
+    var res = await fetch(filename + '?params=' + encodeURIComponent(JSON.stringify(params)));
     var text = await res.text();
     return {text: text, params: params};
   }

@@ -13,11 +13,13 @@ var reUpdate = {
     this.clientPath = clientPath;
     this.basePath = basePath;
     return async function(req, res, next){
-      if(req.url == '/') req.url += '/../';
-      req.url = await internal.addIndexHTML(path.join(reUpdate.clientPath, req.url));
+      //https://stackoverflow.com/questions/14166898/node-js-with-express-how-to-remove-the-query-string-from-the-url
+      var path2 = req.path;
+      if(path2 == '/') path2 += '/../';
+      path2 = await internal.addIndexHTML(path.join(reUpdate.clientPath, path2));
 
-      var f = internal.fileInfo(path.join(reUpdate.basePath, req.url));
-      console.log('Requesting: ' + req.url + ', Mime Type: ' + f.mimeType);
+      var f = internal.fileInfo(path.join(reUpdate.basePath, path2));
+      console.log('Requesting: ' + path2 + ', Mime Type: ' + f.mimeType);
 
       if(internal.mimeTypes[f.mimeType]){
         res.setHeader(
@@ -26,7 +28,23 @@ var reUpdate = {
         );
         //https://nodejs.org/dist/latest-v10.x/docs/api/fs.html#fs_filehandle_readfile_options
         var text = await fs.readFile(f.fullPath, {encoding: f.encoding});
-        text = await internal.parse(text, {req: req, res: res, path: path.dirname(req.url)}, internal.mimeTypes[f.mimeType]);
+        var params2;
+        try{
+          params2 = {
+            req: req,
+            res: res,
+            path: path.dirname(path2),
+            ...JSON.parse(req.query.params || '{}'),
+          }
+        }catch(e){
+          params2 = {
+            req: req,
+            res: res,
+            path: path.dirname(path2),
+          }
+          console.warn('Warning:    malformed JSON: ', req.query.params);
+        }
+        text = await internal.parse(text, params2, internal.mimeTypes[f.mimeType]);
         res.end(text);
       }else{
         res.sendFile(f.fullPath);
