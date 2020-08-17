@@ -11,12 +11,12 @@
     window.reUpdate = reUpdate;
     reUpdate.log();
   </script>
-  <<<this.test = 'test'>>>
-  << console.log('This is a <<<yield this.test>>>.') >>
+  <<<vars.test = 'test'>>>
+  << console.log('This is a <<<yield vars.test>>>.') >>
 
   <button onclick="toggleButtonState()">Toggle State</button>
-  << toggleButtonState = () => this.buttonState = !this.buttonState >>
-  State: << yield this.buttonState || false >>
+  << toggleButtonState = () => watch.buttonState = !watch.buttonState >>
+  State: << yield watch.buttonState || false >>
   <br>
   
   << yield 'This is a <b>raw HTML</b> include' >>
@@ -26,26 +26,26 @@
   Your IP is <<<yield params.req.connection.remoteAddress>>>
   <br>
   <<
-    await this.sleep(1000);
+    await utils.sleep(1000);
     yield '1<br>';
-    await this.sleep(1000);
+    await utils.sleep(1000);
     yield '2<br>';
-    await this.sleep(1000);
+    await utils.sleep(1000);
     yield '3<br>';
   >>
   <<
-    await this.sleep(4000);
+    await utils.sleep(4000);
     for(var i = 0; i < 50; i++){
-      await this.sleep(50);
+      await utils.sleep(50);
       yield '#';
     }
   >>
   <br>
-  << this.type = 'dynamically' >>
-  << ChangeType = () => this.type = 'reUpdate' >>
+  << watch.type = 'dynamically' >>
+  << ChangeType = () => watch.type = 'reUpdate' >>
   <button onclick="ChangeType()">Change Type</button>
   <<
-    yield include('/page.html', {type: this.type});
+    yield include('/page.html', {type: watch.type});
   >>
   <<<
     yield include('/page.html', {type: 'statically'});

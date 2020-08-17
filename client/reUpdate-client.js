@@ -1,5 +1,5 @@
 var internal = {
-  this: {},
+  watch: {},
   codeBlocks: [],
   parse: function(html, params = {}){
     var parent = html;
@@ -41,14 +41,19 @@ class CodeBlock{
     var proxy = new Proxy(obj, {
       get: function(target, key){
         this.events.push(key);
-        return internal.this[key];
+        return internal.watch[key];
       }.bind(this),
       set: function(target, key, value){
-        reUpdate.this[key] = value;
+        reUpdate.watch[key] = value;
         return true;
       }
     });
-    var gen = GeneratorFunction('include', 'params', this.src).bind(proxy, this.include, this.params)() || '';
+    var gen = GeneratorFunction(
+      'include', 'utils', 'vars', 'consts', 'watch', 'params', this.src
+    ).bind(
+      reUpdate, this.include,
+      reUpdate.utils, reUpdate.vars, reUpdate.consts, proxy, this.params
+    )() || '';
     for await(var html of gen){
       var html2 = html !== undefined ? html : '';
       var text = html2.text || html2;
@@ -107,14 +112,18 @@ class htmlCodeBlock extends CodeBlock{
 
 var reUpdate = {
   log: () => console.log('reUpdate-client!'),
+  utils: {},
+  vars: {},
+  consts: {},
   //https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy
-  this: new Proxy(internal.this, {
+  watch: new Proxy(internal.watch, {
     get: function(target, key){
-      return internal.this[key];
+      return internal.watch[key];
     },
     set: function(target, key, value){
-      if(internal.this[key] == value) return true;
-      internal.this[key] = value;
+      if(internal.watch[key] == value) return true;
+      internal.watch[key] = value;
+      console.log('property set', key, value);
       var internalCodeBlocks = [...internal.codeBlocks];
       for(var codeBlock of internalCodeBlocks)
         for(var item of codeBlock.events)
@@ -126,7 +135,7 @@ var reUpdate = {
   internal: internal,
 }
 
-reUpdate.this.sleep = async (ms) => new Promise(resolve => setTimeout(resolve, ms));
+reUpdate.utils.sleep = async (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 
 export {

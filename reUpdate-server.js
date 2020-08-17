@@ -5,8 +5,10 @@ const path = require('path');
 
 var reUpdate = {
   log: () => console.log('reUpdate-server!'),
+  utils: {},
+  vars: {},
+  consts: {},
   //https://expressjs.com/en/guide/writing-middleware.html
-  this: {},
   express: function(basePath, clientPath){
     this.clientPath = clientPath;
     this.basePath = basePath;
@@ -47,10 +49,11 @@ var internal = {
         var ret = '';
         //https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/GeneratorFunction
         var GeneratorFunction = Object.getPrototypeOf(async function*(){}).constructor;
-        var gen = new GeneratorFunction('include', 'params', code).bind(
-          reUpdate.this,
-          internal.include.bind(null, params.path), //.bind(this, {req: params.req, res: params.res}),
-          params
+        var gen = new GeneratorFunction(
+          'include', 'utils', 'vars', 'consts', 'params', code //this.src
+        ).bind(
+          reUpdate, internal.include.bind(null, params.path),
+          reUpdate.utils, reUpdate.vars, reUpdate.consts, params
         )();
         for await(var html of gen){
           var html2 = html !== undefined ? html : '';
