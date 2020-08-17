@@ -11,8 +11,7 @@ var reUpdate = {
     this.clientPath = clientPath;
     this.basePath = basePath;
     return async function(req, res, next){
-      if(req.url[req.url.length - 1] == '/')
-        req.url += 'index.html';
+      if(req.url == '/') req.url += '../index.html';
       var f = internal.fileInfo(path.join(reUpdate.basePath, reUpdate.clientPath, req.url));
       console.log('Requesting: ' + req.url + ', Mime Type: ' + f.mimeType);
 
@@ -52,13 +51,13 @@ var internal = {
           params
         )();
         for await(var html of gen){
-          var isArray = Array.isArray(html);
-          var html2 = isArray ? html[0] : html;
+          var isArray = Array.isArray(await html);
+          var html2 = isArray ? await html[0] : await html;
           var text = html2 !== undefined ? (html2.text || html2) : html2;
           var params2 = {
             req: params.req,
             res: params.res,
-            path: text !== undefined ? (html.path || params.path) : params.path,
+            path: text !== undefined ? (html2.path || params.path) : params.path,
             ...(isArray ? html[1] : {})
           };
           //this.yield(html2, params2);
