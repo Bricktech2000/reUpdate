@@ -123,7 +123,6 @@ var reUpdate = {
     set: function(target, key, value){
       if(internal.watch[key] == value) return true;
       internal.watch[key] = value;
-      console.log('property set', key, value);
       var internalCodeBlocks = [...internal.codeBlocks];
       for(var codeBlock of internalCodeBlocks)
         for(var item of codeBlock.events)
