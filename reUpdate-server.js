@@ -11,14 +11,9 @@ var reUpdate = {
     this.clientPath = clientPath;
     this.basePath = basePath;
     return async function(req, res, next){
-      console.log(req.url);
       if(req.url == '/') req.url += '/../';
       req.url = await internal.addIndexHTML(path.join(reUpdate.clientPath, req.url));
 
-      console.log(reUpdate.clientPath, req.url);
-      //else if((await fs.lstat(path.join(reUpdate.basePath, reUpdate.clientPath, req.url))).isDirectory())
-      //  req.url = path.join(req.url, 'index.html');
-      console.log(req.url);
       var f = internal.fileInfo(path.join(reUpdate.basePath, req.url));
       console.log('Requesting: ' + req.url + ', Mime Type: ' + f.mimeType);
 

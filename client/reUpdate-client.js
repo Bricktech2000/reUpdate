@@ -56,7 +56,6 @@ class CodeBlock{
         //path: html2.path || params.path,
         ...(html2.params || {})
       };
-      console.log(html2, text);
       this.yield(text, params2);
     }
   }
