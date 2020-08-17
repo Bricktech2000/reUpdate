@@ -21,7 +21,7 @@
   
   << yield 'This is a <b>raw HTML</b> include' >>
   <br>
-  Here is a test error: <<<//throw new Error('This is a test error.')>>>
+  Here is a test error: <<<throw new Error('This is a test error.')>>>
   <br>
   Your IP is <<<yield params.req.connection.remoteAddress>>>
   <br>
@@ -45,10 +45,10 @@
   << ChangeType = () => this.type = 'reUpdate' >>
   <button onclick="ChangeType()">Change Type</button>
   <<
-    yield [include('/page.html'), {type: this.type}];
+    yield include('/page.html', {type: this.type});
   >>
   <<<
-    yield [include('/page.html'), {type: 'statically'}];
+    yield include('/page.html', {type: 'statically'});
   >>>
 </body>
 </html>

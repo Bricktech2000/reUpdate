@@ -50,11 +50,14 @@ class CodeBlock{
     });
     var gen = GeneratorFunction('include', 'params', this.src).bind(proxy, this.include, this.params)() || '';
     for await(var html of gen){
-      //var key = (typeof html === 'string') ? '' : Object.keys(html)[0];
-      var isArray = Array.isArray(html);
-      var html2 = await (isArray ? html[0] : html);
-      var params2 = isArray ? html[1] : {};
-      this.yield(html2, params2);
+      var html2 = html !== undefined ? html : '';
+      var text = html2.text || html2;
+      var params2 = {
+        //path: html2.path || params.path,
+        ...(html2.params || {})
+      };
+      console.log(html2, text);
+      this.yield(text, params2);
     }
   }
   yield(html){
@@ -96,10 +99,10 @@ class htmlCodeBlock extends CodeBlock{
     }
     this.exec();
   }
-  async include(filename){
+  async include(filename, params){
     var res = await fetch(filename);
     var text = await res.text();
-    return text;
+    return {text: text, params: params};
   }
 }
 
