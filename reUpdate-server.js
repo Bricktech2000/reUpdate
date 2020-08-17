@@ -52,6 +52,8 @@ var reUpdate = {
     }
   },
 }
+reUpdate.utils.sleep = async (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 var internal = {
   regexes: {
     server: /<<<([^]*?)>>>/g,
@@ -75,7 +77,7 @@ var internal = {
         )();
         for await(var html of gen){
           var html2 = html !== undefined ? html : '';
-          var text = await html2.text || html;
+          var text = html2.text || html;
           var params2 = {
             req: params.req,
             res: params.res,
@@ -90,7 +92,7 @@ var internal = {
         return 'Server' + e;
       }
     }
-    return (await replaceAsync(text, internal.regexes.server, async (a, code) => await exec(code)))
+    return (await replacePromise(text, internal.regexes.server, async (a, code) => await exec(code)))
       .replace(internal.regexes.client, (a, code) => func(code) )
   },
   include: async function(filePath1, filePath2, params){
@@ -116,14 +118,32 @@ var internal = {
   }
 }
 //https://stackoverflow.com/questions/33631041/javascript-async-await-in-replace
+//cannot use this because all asyncFn's get executed at once in the beginning
+//execution order will be wrong, causing all sorts of problems
 async function replaceAsync(str, regex, asyncFn) {
   const promises = [];
   str.replace(regex, (match, ...args) => {
-      const promise = asyncFn(match, ...args);
-      promises.push(promise);
+    const promise = asyncFn(match, ...args);
+    promises.push(promise);
   });
   const data = await Promise.all(promises);
   return str.replace(regex, () => data.shift());
 }
+//https://dev.to/ycmjason/stringprototypereplace-asynchronously-28k9
+//https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/exec
+async function replacePromise(str, regex, func){
+  var regex2 = new RegExp(regex); //otherwise, lastIndex gets corrupted... the worst bug EVER
+  var ret = '';
+  var match;
+  var i = 0;
+  while((match = regex2.exec(str)) !== null) {
+    ret += str.slice(i, match.index);
+    var val = await func(...match);
+    ret += val;
+    i = regex2.lastIndex;
+  }
+  ret += str.slice(i);
+  return ret;
+};
 
 module.exports = reUpdate;
