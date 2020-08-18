@@ -28,7 +28,6 @@ class CodeBlock{
     this.src = src;
     this.params = params;
     this.events = [];
-    this.exec();
   }
   destructor(){
     internal.codeBlocks.filter((item) => item !== this);
@@ -104,7 +103,9 @@ class htmlCodeBlock extends CodeBlock{
     this.exec();
   }
   async include(filename, params){
-    var res = await fetch(filename + '?params=' + encodeURIComponent(JSON.stringify(params)));
+    var json = JSON.stringify(params);
+    if(json.length > 1000) json = '{}';
+    var res = await fetch(filename + '?params=' + encodeURIComponent(json));
     var text = await res.text();
     return {text: text, params: params};
   }
@@ -141,6 +142,7 @@ export {
   reUpdate,
 }
 
-window.addEventListener('load', (e) =>
-  internal.parse(document.documentElement)
-);
+window.addEventListener('load', async (e) => {
+  await internal.parse(document.documentElement);
+  for(var codeBlock of internal.codeBlocks) await codeBlock.exec();
+});
