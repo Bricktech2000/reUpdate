@@ -61,6 +61,7 @@ var internal = {
   },
   mimeTypes: {
     'text/html': code => `<code class="reUpdate" style="display: none;">${code}</code>`,
+    'text/css': code => `ClientTypeError: running client-side code inside css file`,
   },
   parse: async function(text = '', params = {}, func){
     //return text + '//reUpdate added this comment';
