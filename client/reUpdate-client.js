@@ -1,7 +1,7 @@
 var internal = {
   watch: {},
   codeBlocks: [],
-  parse: function(html, params = {}){
+  parse: async function(html, params = {}){
     var parent = html;
     if(!(html instanceof HTMLElement)){
       parent = document.createElement('template');
@@ -9,12 +9,15 @@ var internal = {
       parent = parent.content;
     }
     var elems = parent.querySelectorAll('code.reUpdate');
+    var codeBlocks = [];
     
     //console.log(parent, params, elems);
     for(var elem of elems)
-      internal.codeBlocks.push(new htmlCodeBlock(elem, params));
+      codeBlocks.push(new htmlCodeBlock(elem, params));
+    for(var codeBlock of codeBlocks)
+      internal.codeBlocks.push(codeBlock);
     
-    return parent;
+    return new Promise(resolve => resolve({codeBlocks: codeBlocks, parent: parent}));
   },
   rawHTML: function(elem){
     return elem.innerHTML
@@ -33,6 +36,7 @@ class CodeBlock{
     internal.codeBlocks.filter((item) => item !== this);
   }
   async exec(){
+    this.elem.classList.remove('reUpdate');
     //https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/GeneratorFunction
     var GeneratorFunction = Object.getPrototypeOf(async function*(){}).constructor;
     var obj = {};
@@ -60,10 +64,10 @@ class CodeBlock{
         //path: html2.path || params.path,
         ...(html2.params || {})
       };
-      this.yield(text, params2);
+      await this.yield(text, params2);
     }
   }
-  yield(html){
+  async yield(html){
     throw new ReferenceError("Extended CodeBlock yield not defined.");
   }
   reexec(){
@@ -78,17 +82,18 @@ class htmlCodeBlock extends CodeBlock{
     var src = internal.rawHTML(elem);
     super(src, params);
     this.elem = elem;
-    this.elem.classList.remove('reUpdate');
   }
-  yield(html, params){
-    var html2 = internal.parse(html, params);
+  async yield(html, params){
+    var {codeBlocks, parent} = await internal.parse(html, params);
     var elem;
-    while(elem = html2.childNodes[0]){
+    console.log(parent.childNodes);
+    while(elem = parent.childNodes[0]){
       if(!this.topElem) this.topElem = elem;
       this.elem.parentNode.insertBefore(elem, this.elem);
     }
+    for(var codeBlock of codeBlocks) codeBlock.exec();
     //https://developer.mozilla.org/en-US/docs/Web/API/Element/insertAdjacentHTML
-    //this.elem.insertAdjacentHTML('beforebegin', html2);
+    //this.elem.insertAdjacentHTML('beforebegin', parent);
     //(!this.topElem) this.topElem = this.elem.previousSibling;
   }
   reexec(){
@@ -143,6 +148,7 @@ export {
 }
 
 window.addEventListener('load', async (e) => {
-  await internal.parse(document.documentElement);
-  for(var codeBlock of internal.codeBlocks) await codeBlock.exec();
+  var {codeBlocks, parent} = await internal.parse(document.documentElement);
+  for(var codeBlock of codeBlocks) codeBlock.exec();
+  //for(var codeBlock of internal.codeBlocks) await codeBlock.exec();
 });
