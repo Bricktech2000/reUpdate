@@ -1,12 +1,13 @@
-const path = require('path');
-const http = require('http');
-const express = require('express');
+import http from 'http';
+import path from 'path';
+import express from 'express';
 var app = express();
 
-const basePath = __dirname;
+//https://stackoverflow.com/questions/8817423/node-dirname-not-defined
+const basePath = path.resolve(); //__dirname
 const clientPath = 'client';
 //https://stackoverflow.com/questions/58384179/syntaxerror-cannot-use-import-statement-outside-a-module
-const reUpdate = require('./reUpdate-server');
+import { reUpdate } from './reUpdate-server.js';
 reUpdate.log();
 
 
@@ -32,15 +33,3 @@ httpServer.listen(8080, function(){
     var port = httpServer.address().port;
     console.log('listening on http://' + host + ':' + port + '/');
 });
-
-
-
-
-
-
-
-
-
-
-
-

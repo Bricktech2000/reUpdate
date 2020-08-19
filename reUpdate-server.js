@@ -1,6 +1,7 @@
-const fs = require('fs').promises;
-const mime = require('mime-types');
-const path = require('path');
+import _fs from 'fs';
+const fs = _fs.promises;
+import mime from 'mime-types';
+import path from 'path';
 
 
 var reUpdate = {
@@ -108,7 +109,7 @@ var internal = {
     };
   },
   async addIndexHTML(filePath){
-    fullPath = path.join(reUpdate.basePath, filePath);
+    var fullPath = path.join(reUpdate.basePath, filePath);
     if((await fs.lstat(fullPath)).isDirectory()) filePath = path.join(filePath, 'index.html');
     return filePath;
   }
@@ -142,4 +143,4 @@ async function replacePromise(str, regex, func){
   return ret;
 };
 
-module.exports = reUpdate;
+export { reUpdate };
