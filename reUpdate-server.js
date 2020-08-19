@@ -13,42 +13,28 @@ var reUpdate = {
     this.clientPath = clientPath;
     this.basePath = basePath;
     return async function(req, res, next){
-      //https://stackoverflow.com/questions/14166898/node-js-with-express-how-to-remove-the-query-string-from-the-url
       var path2 = req.path;
       if(path2 == '/') path2 += '/../';
-      path2 = await internal.addIndexHTML(path.join(reUpdate.clientPath, path2));
+      console.log('Requesting: ' + path2);
 
-      var f = internal.fileInfo(path.join(reUpdate.basePath, path2));
-      console.log('Requesting: ' + path2 + ', Mime Type: ' + f.mimeType);
-
-      if(internal.mimeTypes[f.mimeType]){
-        res.setHeader(
-          'Content-Type', f.mimeType + '; ' + 
-          'charset=' + f.encoding
-        );
-        //https://nodejs.org/dist/latest-v10.x/docs/api/fs.html#fs_filehandle_readfile_options
-        var text = await fs.readFile(f.fullPath, {encoding: f.encoding});
-        var params2;
-        try{
-          params2 = {
-            req: req,
-            res: res,
-            path: path.dirname(path2),
-            ...JSON.parse(req.query.params || '{}'),
-          }
-        }catch(e){
-          params2 = {
-            req: req,
-            res: res,
-            path: path.dirname(path2),
-          }
-          console.warn('Warning:    malformed JSON: ', req.query.params);
-        }
-        text = await internal.parse(text, params2, internal.mimeTypes[f.mimeType]);
-        res.end(text);
-      }else{
-        res.sendFile(f.fullPath);
+      var params = {
+        req: req,
+        res: res,
+        path: path.dirname(path2),
       }
+      try{
+        params = { ...params, ...JSON.parse(req.query.params || '{}'), }
+      }catch(e){
+        console.warn('Warning:    malformed JSON: ', req.query.params);
+      }
+      //https://stackoverflow.com/questions/14166898/node-js-with-express-how-to-remove-the-query-string-from-the-url
+      var incl = await internal.include('/client/', path2, params);
+
+      res.setHeader(
+        'Content-Type', incl.fileInfo.mimeType + '; ' + 
+        'charset=' + incl.fileInfo.encoding
+      );
+      res.end(await internal.yield(incl, params));
     }
   },
 }
@@ -63,7 +49,7 @@ var internal = {
     'text/html': code => `<code class="reUpdate" style="display: none;">${code}</code>`,
     'text/css': code => `ClientTypeError: running client-side code inside css file`,
   },
-  parse: async function(text = '', params = {}, func){
+  parse: async function(text = '', params = {}){
     //return text + '//reUpdate added this comment';
     async function exec(code){
       try{
@@ -76,34 +62,43 @@ var internal = {
           reUpdate, internal.include.bind(null, params.path),
           reUpdate.utils, reUpdate.vars, reUpdate.consts, params
         )();
-        for await(var html of gen){
-          var html2 = html !== undefined ? html : '';
-          var text = html2.text || html;
-          var params2 = {
-            req: params.req,
-            res: params.res,
-            path: html2.path || params.path,
-            ...(html2.params || {})
-          };
-          //this.yield(html2, params2);
-          ret += await internal.parse(text, params2, func);
-        }
+        for await(var html of gen)
+          ret += await internal.yield(html, params);
         return ret;
       }catch(e){
         return 'Server' + e;
       }
     }
     return (await replacePromise(text, internal.regexes.server, async (a, code) => await exec(code)))
-      .replace(internal.regexes.client, (a, code) => func(code) )
+      .replace(internal.regexes.client, (a, code) => params.func(code) )
+  },
+  yield: async function(html, params){
+    var html2 = html !== undefined ? html : '';
+    var text = html2.text || html;
+    var params2 = {
+      ...(html2.params || {}),
+      req: params.req,
+      res: params.res,
+      path: html2.path || params.path,
+      func: html2.func || params.func,
+    };
+    if(html2.fileInfo && internal.mimeTypes[html2.fileInfo.mimeType])
+      return await internal.parse(text, params2);
+    else return text;
   },
   include: async function(filePath1, filePath2, params){
-    //https://stackoverflow.com/questions/17192150/node-js-get-folder-path-from-a-file
-    var relPath = await internal.addIndexHTML(path.join(filePath1, filePath2));
-    var fullPath = path.join(reUpdate.basePath, relPath);
-    
-    var f = internal.fileInfo(fullPath);
-    var text = await fs.readFile(f.fullPath, {encoding: f.encoding});
-    return {text: text, path: path.dirname(relPath), params: params}; //, {..._params, ...params});
+    try{
+      //https://stackoverflow.com/questions/17192150/node-js-get-folder-path-from-a-file
+      var relPath = await internal.addIndexHTML(path.join(filePath1, filePath2));
+      var fullPath = path.join(reUpdate.basePath, relPath);
+      console.log('Including: ' + relPath);
+      
+      var f = internal.fileInfo(fullPath);
+      var text = await fs.readFile(f.fullPath, {encoding: f.encoding});
+      return {text: text, path: path.dirname(relPath), params: params, fileInfo: f, func: internal.mimeTypes[f.mimeType]};
+    }catch(e){
+      return {text: 'Server ' + e, path: '/', params: params, fileInfo: {}, func: function(){return 'Server ' + e}};
+    }
   },
   fileInfo(filePath){
     return {

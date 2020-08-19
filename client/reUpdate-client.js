@@ -108,11 +108,15 @@ class htmlCodeBlock extends CodeBlock{
     this.exec();
   }
   async include(filename, params){
-    var json = JSON.stringify(params);
-    if(json.length > 1000) json = '{}';
-    var res = await fetch(filename + '?params=' + encodeURIComponent(json));
-    var text = await res.text();
-    return {text: text, params: params};
+    try{
+      var json = JSON.stringify(params);
+      if(json.length > 1000) json = '{}';
+      var res = await fetch(filename + '?params=' + encodeURIComponent(json));
+      var text = await res.text();
+      return {text: text, params: params};
+    }catch(e){
+      console.log(e);
+    }
   }
 }
 
