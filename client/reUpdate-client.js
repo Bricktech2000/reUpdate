@@ -86,7 +86,6 @@ class htmlCodeBlock extends CodeBlock{
   async yield(html, params){
     var {codeBlocks, parent} = await internal.parse(html, params);
     var elem;
-    console.log(parent.childNodes);
     while(elem = parent.childNodes[0]){
       if(!this.topElem) this.topElem = elem;
       this.elem.parentNode.insertBefore(elem, this.elem);
