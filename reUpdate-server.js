@@ -91,6 +91,13 @@ var internal = {
     try{
       //https://stackoverflow.com/questions/17192150/node-js-get-folder-path-from-a-file
       var relPath = await internal.addIndexHTML(path.join(filePath1, filePath2));
+      //https://nodejs.org/api/fs.html
+      var exists, fileHandle;
+      try{ fileHandle = await fs.open(path.join(reUpdate.basePath, relPath), 'r'); exists = true; }
+      catch(e){ exists = false; }
+      finally { if(fileHandle !== undefined) await fileHandle.close(); }
+      
+      if(relPath.endsWith('index.html') && !exists) relPath = 'index.html';
       var fullPath = path.join(reUpdate.basePath, relPath);
       console.log('Including: ' + relPath);
       

@@ -107,7 +107,7 @@ class htmlCodeBlock extends CodeBlock{
     }
     this.exec();
   }
-  async include(filename, params){
+  async include(filename, params = {}){
     try{
       var json = JSON.stringify(params);
       if(json.length > 1000) json = '{}';
