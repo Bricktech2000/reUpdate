@@ -7,7 +7,6 @@ import path from 'path';
 var reUpdate = {
   log: () => console.log('reUpdate-server!'),
   utils: {},
-  vars: {},
   consts: {},
   //https://expressjs.com/en/guide/writing-middleware.html
   express: function(basePath, clientPath){
@@ -52,6 +51,7 @@ var internal = {
   },
   parse: async function(text = '', params = {}){
     //return text + '//reUpdate added this comment';
+    var vars = {};
     async function exec(code){
       try{
         var ret = '';
@@ -61,7 +61,7 @@ var internal = {
           'include', 'utils', 'vars', 'consts', 'params', code //this.src
         ).bind(
           reUpdate, internal.include.bind(null, params.path),
-          reUpdate.utils, reUpdate.vars, reUpdate.consts, params
+          reUpdate.utils, vars, reUpdate.consts, params
         )();
         for await(var html of gen)
           ret += await internal.yield(html, params);

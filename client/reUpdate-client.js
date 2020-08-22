@@ -12,8 +12,9 @@ var internal = {
     var codeBlocks = [];
     
     //console.log(parent, params, elems);
+    var vars = {};
     for(var elem of elems)
-      codeBlocks.push(new htmlCodeBlock(elem, params));
+      codeBlocks.push(new htmlCodeBlock(elem, params, vars));
     for(var codeBlock of codeBlocks)
       internal.codeBlocks.push(codeBlock);
     
@@ -27,10 +28,11 @@ var internal = {
   },
 }
 class CodeBlock{
-  constructor(src, params){
+  constructor(src, params, vars){
     this.src = src;
     this.params = params;
     this.events = [];
+    this.vars = vars;
   }
   destructor(){
     internal.codeBlocks.filter((item) => item !== this);
@@ -55,7 +57,7 @@ class CodeBlock{
       'include', 'utils', 'vars', 'consts', 'watch', 'params', this.src
     ).bind(
       reUpdate, this.include,
-      reUpdate.utils, reUpdate.vars, reUpdate.consts, proxy, this.params
+      reUpdate.utils, this.vars, reUpdate.consts, proxy, this.params
     )() || '';
     for await(var html of gen){
       var html2 = html !== undefined ? html : '';
@@ -78,9 +80,9 @@ class CodeBlock{
   }
 }
 class htmlCodeBlock extends CodeBlock{
-  constructor(elem, params){
+  constructor(elem, params, vars){
     var src = internal.rawHTML(elem);
-    super(src, params);
+    super(src, params, vars);
     this.elem = elem;
   }
   async yield(html, params){
