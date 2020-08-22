@@ -90,7 +90,8 @@ class htmlCodeBlock extends CodeBlock{
     var elem;
     while(elem = parent.childNodes[0]){
       if(!this.topElem) this.topElem = elem;
-      this.elem.parentNode.insertBefore(elem, this.elem);
+      if(this.elem.parentNode) this.elem.parentNode.insertBefore(elem, this.elem);
+      else break;
     }
     for(var codeBlock of codeBlocks) codeBlock.exec();
     //https://developer.mozilla.org/en-US/docs/Web/API/Element/insertAdjacentHTML
@@ -101,8 +102,8 @@ class htmlCodeBlock extends CodeBlock{
     if(this.topElem){
       while(true){
         var elem = this.elem.previousSibling;
-        elem.parentNode.removeChild(elem); //elem.outerHTML = '';
-        if(elem == this.topElem) break;
+        if(elem) elem.parentNode.removeChild(elem); //elem.outerHTML = '';
+        if(elem == this.topElem || !elem) break;
       }
       this.topElem = null;
     }
