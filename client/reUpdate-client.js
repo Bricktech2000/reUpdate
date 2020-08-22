@@ -111,7 +111,7 @@ class htmlCodeBlock extends CodeBlock{
   async include(filename, params = {}){
     try{
       var json = JSON.stringify(params);
-      if(json.length > 1000) json = '{}';
+      if(json.length > 10000) json = '{}';
       var res = await fetch(filename + '?params=' + encodeURIComponent(json));
       var text = await res.text();
       return {text: text, params: params};
