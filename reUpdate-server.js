@@ -28,7 +28,7 @@ var reUpdate = {
         console.warn('Warning:    malformed JSON: ', req.query.params);
       }
       //https://stackoverflow.com/questions/14166898/node-js-with-express-how-to-remove-the-query-string-from-the-url
-      var incl = await internal.include('/client/', path2, params);
+      var incl = await internal.include('/client/', decodeURIComponent(path2), params);
 
       res.setHeader(
         'Content-Type', incl.fileInfo.mimeType + '; ' + 
