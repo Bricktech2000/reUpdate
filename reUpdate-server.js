@@ -48,11 +48,13 @@ var internal = {
   mimeTypes: {
     'text/html': code => `<code class="reUpdate" style="display: none;">${code}</code>`,
     'text/css': code => `ClientTypeError: running client-side code inside css file`,
+    'text/markdown': code => `ClientTypeError: running client-side code inside markdown file`,
   },
   parse: async function(text = '', params = {}){
     //return text + '//reUpdate added this comment';
     var vars = {};
     async function exec(code){
+      if(code.includes('srcs')) console.log({code});
       try{
         var ret = '';
         //https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/GeneratorFunction
