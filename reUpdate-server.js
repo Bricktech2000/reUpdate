@@ -27,9 +27,19 @@ var reUpdate = {
       }catch(e){
         console.warn('Warning:    malformed JSON: ', req.query.params);
       }
-      //https://stackoverflow.com/questions/14166898/node-js-with-express-how-to-remove-the-query-string-from-the-url
-      var incl = await internal.include('/client/', decodeURIComponent(path2), params);
-
+      var incl;
+      try{
+        //https://stackoverflow.com/questions/14166898/node-js-with-express-how-to-remove-the-query-string-from-the-url
+        incl = await internal.include('/client/', decodeURIComponent(path2), params);
+      }catch(e){
+        incl = {
+          text: 'Client' + e,
+          fileInfo: {
+            mimeType: 'text/html',
+            encoding: true,
+          }
+        };
+      }
       res.setHeader(
         'Content-Type', incl.fileInfo.mimeType + '; ' + 
         'charset=' + incl.fileInfo.encoding
