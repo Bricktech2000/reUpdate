@@ -3,6 +3,21 @@ const fs = _fs.promises;
 import mime from 'mime-types';
 import path from 'path';
 
+class ServerError extends Error {
+  constructor(err, code){
+    super(err.message);
+    this.name = 'ServerError: ' + err.name + '';
+    this.code = code;
+  }
+}
+class ClientError extends Error {
+  constructor(err, code){
+    super(err.message);
+    this.name = 'ClientError: ' + err.name + '';
+    this.code = code;
+  }
+}
+
 
 var reUpdate = {
   log: () => console.log('reUpdate-server!'),
@@ -32,19 +47,17 @@ var reUpdate = {
         //https://stackoverflow.com/questions/14166898/node-js-with-express-how-to-remove-the-query-string-from-the-url
         incl = await internal.include('/client/', decodeURIComponent(path2), params);
       }catch(e){
-        incl = {
-          text: 'Client' + e,
-          fileInfo: {
-            mimeType: 'text/html',
-            encoding: true,
-          }
-        };
+        return internal.endError(e, res);
       }
       res.setHeader(
         'Content-Type', incl.fileInfo.mimeType + '; ' + 
         'charset=' + incl.fileInfo.encoding
       );
-      res.end(await internal.yield(incl, params));
+      try{
+        res.end(await internal.yield(incl, params));
+      }catch(e){
+        return internal.endError(e, res);
+      }
     }
   },
 }
@@ -57,14 +70,26 @@ var internal = {
   },
   mimeTypes: {
     'text/html': code => `<code class="reUpdate" style="display: none;">${code}</code>`,
-    'text/css': code => `ClientTypeError: running client-side code inside css file`,
-    'text/markdown': code => `ClientTypeError: running client-side code inside markdown file`,
+    'text/css': code => new ClientError(new TypeError('running client-side code inside css file'), '422'),
+    'text/markdown': code => new ClientError(new TypeError('running client-side code inside markdown file'), '422'),
+  },
+  errFileInfo: {
+    mimeType: 'text/html',
+    encoding: true,
+  },
+  endError: function(e, res){
+    var message = e.name + ': ' + e.message + '\n';
+    if(e instanceof ServerError)
+      res.status(e.code).end(message);
+    else if(e instanceof ClientError)
+      res.status(e.code).end(message);
+    else
+      res.status(503).end(message);
   },
   parse: async function(text = '', params = {}){
     //return text + '//reUpdate added this comment';
     var vars = {};
     async function exec(code){
-      if(code.includes('srcs')) console.log({code});
       try{
         var ret = '';
         //https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/GeneratorFunction
@@ -79,11 +104,18 @@ var internal = {
           ret += await internal.yield(html, params);
         return ret;
       }catch(e){
-        return 'Server' + e;
+        throw new ServerError(e, '500');
       }
     }
-    return (await replacePromise(text, internal.regexes.server, async (a, code) => await exec(code)))
-      .replace(internal.regexes.client, (a, code) => params.func(code) )
+    
+    text = await replacePromise(text, internal.regexes.server, async (a, code) => await exec(code));
+
+    //coming from include, which returns `internal.mimeTypes[...]`, to prevent client-side code in markdown / css files
+    if(text.match(internal.regexes.client))
+      if(params.func && params.func() instanceof Error) throw params.func();
+
+    text = text.replace(internal.regexes.client, (a, code) => params.func(code));
+    return text;
   },
   yield: async function(html, params){
     var html2 = html !== undefined ? html : '';
@@ -95,29 +127,39 @@ var internal = {
       path: html2.path || params.path,
       func: html2.func || params.func,
     };
-    if(html2.fileInfo && internal.mimeTypes[html2.fileInfo.mimeType])
-      return await internal.parse(text, params2);
-    else return text;
+    try{
+      if(html2.fileInfo && internal.mimeTypes[html2.fileInfo.mimeType])
+        return await internal.parse(text, params2);
+      else return text;
+    }catch(e){
+      return e.name + ': ' + e.message + '\n';
+    }
   },
   include: async function(filePath1, filePath2, params){
     try{
       //https://stackoverflow.com/questions/17192150/node-js-get-folder-path-from-a-file
       var relPath = await internal.addIndexHTML(path.join(filePath1, filePath2));
-      //https://nodejs.org/api/fs.html
-      var exists, fileHandle;
-      try{ fileHandle = await fs.open(path.join(reUpdate.basePath, relPath), 'r'); exists = true; }
-      catch(e){ exists = false; }
-      finally { if(fileHandle !== undefined) await fileHandle.close(); }
-      
-      if(relPath.endsWith('index.html') && !exists) relPath = 'index.html';
-      var fullPath = path.join(reUpdate.basePath, relPath);
-      console.log('Including: ' + relPath);
-      
+    }catch(e){
+      throw new ClientError(e, '404');
+    }
+    //https://nodejs.org/api/fs.html
+    var exists, fileHandle;
+    try{ fileHandle = await fs.open(path.join(reUpdate.basePath, relPath), 'r'); exists = true; }
+    catch(e){ exists = false; }
+    finally { if(fileHandle !== undefined) await fileHandle.close(); }
+    
+    if(relPath.endsWith('index.html') && !exists) relPath = 'index.html';
+    var fullPath = path.join(reUpdate.basePath, relPath);
+    console.log('Including: ' + relPath);
+
+    try{
       var f = internal.fileInfo(fullPath);
       var text = await fs.readFile(f.fullPath, {encoding: f.encoding});
-      return {text: text, path: path.dirname(relPath), params: params, fileInfo: f, func: internal.mimeTypes[f.mimeType]};
+      var mimeType = internal.mimeTypes[f.mimeType];
+      return {text: text, path: path.dirname(relPath), params: params, fileInfo: f, func: mimeType};
     }catch(e){
-      return {text: 'Server ' + e, path: '/', params: params, fileInfo: {}, func: function(){return 'Server ' + e}};
+      //return {text: 'Server' + e, path: '/', params: params, fileInfo: internal.errFileInfo, func: function(){return 'Server' + e}};
+      throw new ClientError(e, '404');
     }
   },
   fileInfo(filePath){
