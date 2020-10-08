@@ -30,7 +30,7 @@ var reUpdate = {
     return async function(req, res, next){
       var path2 = req.path;
       if(path2 == '/') path2 += '/../';
-      console.log('Requesting: ' + path2);
+      //console.log('Requesting: ' + path2);
 
       var params = {
         req: req,
@@ -150,7 +150,7 @@ var internal = {
     
     if(relPath.endsWith('index.html') && !exists) relPath = 'index.html';
     var fullPath = path.join(reUpdate.basePath, relPath);
-    console.log('Including: ' + relPath);
+    //console.log('Including: ' + relPath);
 
     try{
       var f = internal.fileInfo(fullPath);
