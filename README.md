@@ -1,2 +1,3 @@
 # reUpdate
-A very cool front & back-end javascript framework
+
+_A very cool front & back-end javascript framework_
